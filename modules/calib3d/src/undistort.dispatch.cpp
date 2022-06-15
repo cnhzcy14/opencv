@@ -47,7 +47,7 @@
 
 #include "undistort.simd.hpp"
 #include "undistort.simd_declarations.hpp" // defines CV_CPU_DISPATCH_MODES_ALL=AVX2,...,BASELINE based on CMakeLists.txt content
-
+#include <iostream>
 namespace cv
 {
 
@@ -353,6 +353,20 @@ static void cvUndistortPointsInternal( const CvMat* _src, CvMat* _dst, const CvM
         {
             x = srcd[i*sstep].x;
             y = srcd[i*sstep].y;
+        }
+        if(x<0 || y<0)
+        {
+            if( dtype == CV_32FC2 )
+            {
+                dstf[i*dstep].x = -10000;
+                dstf[i*dstep].y = -10000;
+            }
+            else
+            {
+                dstd[i*dstep].x = -10000;
+                dstd[i*dstep].y = -10000;
+            }
+            continue;
         }
         u = x; v = y;
         x = (x - cx)*ifx;

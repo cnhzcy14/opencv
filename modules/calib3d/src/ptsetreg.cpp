@@ -46,7 +46,7 @@
 #include <algorithm>
 #include <iterator>
 #include <limits>
-
+#include <iostream>
 namespace cv
 {
 
@@ -130,7 +130,7 @@ public:
         {
             int i;
 
-            for( i = 0; i < modelPoints; ++i )
+            for( i = 0; i < modelPoints;  )
             {
                 int idx_i;
 
@@ -142,10 +142,29 @@ public:
                 idx[i] = idx_i;
 
                 for( int k = 0; k < esz1; ++k )
+                {
+                    const float *p = reinterpret_cast<const float *>(&m1ptr[idx_i*esz1 + k]);
+                    if(*p <= -1) 
+                    {
+                        idx[i] = -1;
+                        break;
+                    }
                     ms1ptr[i*esz1 + k] = m1ptr[idx_i*esz1 + k];
+                }
 
                 for( int k = 0; k < esz2; ++k )
+                {
+                    const float *p = reinterpret_cast<const float *>(&m2ptr[idx_i*esz2 + k]);
+                    if(*p <= -1) 
+                    {
+                        idx[i] = -1;
+                        break;
+                    }
                     ms2ptr[i*esz2 + k] = m2ptr[idx_i*esz2 + k];
+                }
+
+                if(idx[i] != -1)
+                    i++;
             }
 
             if( cb->checkSubset(ms1, ms2, i) )
@@ -166,7 +185,11 @@ public:
         int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
         int count = m1.checkVector(d1), count2 = m2.checkVector(d2), maxGoodCount = 0;
 
-        RNG rng((uint64)-1);
+        cv::Mat m2_(cv::Size(d2, count2), CV_32FC1, (void *)m2.data);
+        cv::Mat temp = (m2_ <= -1);
+        int neg_count = cv::countNonZero(temp);
+        int real_count = count2 - neg_count / 2;
+        // RNG rng((uint64)-1);
 
         CV_Assert( cb );
         CV_Assert( confidence > 0 && confidence < 1 );
@@ -203,7 +226,7 @@ public:
             int i, nmodels;
             if( count > modelPoints )
             {
-                bool found = getSubset( m1, m2, ms1, ms2, rng, 10000 );
+                bool found = getSubset( m1, m2, ms1, ms2, theRNG(), 10000 );
                 if( !found )
                 {
                     if( iter == 0 )
@@ -228,7 +251,7 @@ public:
                     std::swap(mask, bestMask);
                     model_i.copyTo(bestModel);
                     maxGoodCount = goodCount;
-                    niters = RANSACUpdateNumIters( confidence, (double)(count - goodCount)/count, modelPoints, niters );
+                    niters = RANSACUpdateNumIters( confidence, (double)(real_count - goodCount)/real_count, modelPoints, niters );
                 }
             }
         }

@@ -784,6 +784,12 @@ public:
 
         for( i = 0; i < count; i++ )
         {
+            if(m1[i].x <= -1 || m1[i].y <= -1 || m2[i].x <= -1 || m2[i].y <= -1)
+            {
+                err[i] = (float)10000; 
+                continue;
+            }
+
             double a, b, c, d1, d2, s1, s2;
 
             a = F[0]*m1[i].x + F[1]*m1[i].y + F[2];
@@ -836,31 +842,39 @@ cv::Mat cv::findFundamentalMat( InputArray _points1, InputArray _points2,
 
     CV_Assert( m1.checkVector(2) == m2.checkVector(2) );
 
+    //TODO: should be better, fix it later
+    int d2 = m2.channels() > 1 ? m2.channels() : m2.cols;
+    cv::Mat m2_(cv::Size(d2, npoints), CV_32FC1, (void *)m2.data);
+    cv::Mat temp = (m2_ <= -1);
+    int neg_count = cv::countNonZero(temp);
+    int real_count = npoints - neg_count / 2;
+    npoints = real_count;
+
     if( npoints < 7 )
         return Mat();
 
     Ptr<PointSetRegistrator::Callback> cb = makePtr<FMEstimatorCallback>();
     int result;
 
-    if( npoints == 7 || method == FM_8POINT )
-    {
-        result = cb->runKernel(m1, m2, F);
-        if( _mask.needed() )
-        {
-            _mask.create(npoints, 1, CV_8U, -1, true);
-            Mat mask = _mask.getMat();
-            CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == npoints );
-            mask.setTo(Scalar::all(1));
-        }
-    }
-    else
+    // if( npoints == 7 || method == FM_8POINT )
+    // {
+    //     result = cb->runKernel(m1, m2, F);
+    //     if( _mask.needed() )
+    //     {
+    //         _mask.create(npoints, 1, CV_8U, -1, true);
+    //         Mat mask = _mask.getMat();
+    //         CV_Assert( (mask.cols == 1 || mask.rows == 1) && (int)mask.total() == npoints );
+    //         mask.setTo(Scalar::all(1));
+    //     }
+    // }
+    // else
     {
         if( ransacReprojThreshold <= 0 )
             ransacReprojThreshold = 3;
         if( confidence < DBL_EPSILON || confidence > 1 - DBL_EPSILON )
             confidence = 0.99;
 
-        if( (method & ~3) == FM_RANSAC && npoints >= 15 )
+        if( (method & ~3) == FM_RANSAC && npoints >= 7 )
             result = createRANSACPointSetRegistrator(cb, 7, ransacReprojThreshold, confidence, maxIters)->run(m1, m2, F, _mask);
         else
             result = createLMeDSPointSetRegistrator(cb, 7, confidence)->run(m1, m2, F, _mask);
