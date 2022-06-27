@@ -309,7 +309,7 @@ static bool ocl_FAST( InputArray _img, std::vector<KeyPoint>& keypoints,
 
     UMat ucounter1(kp1, Rect(0,0,1,1));
     ucounter1.setTo(Scalar::all(0));
-
+    
     if( !fastKptKernel.args(ocl::KernelArg::ReadOnly(img),
                             ocl::KernelArg::PtrReadWrite(kp1),
                             maxKeypoints, threshold).run(2, globalsize, 0, true))
@@ -493,7 +493,7 @@ void FAST(InputArray _img, std::vector<KeyPoint>& keypoints, int threshold, bool
     CV_INSTRUMENT_REGION();
 
     CV_OCL_RUN(_img.isUMat() && type == FastFeatureDetector::TYPE_9_16,
-               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 10000));
+               ocl_FAST(_img, keypoints, threshold, nonmax_suppression, 100000));
 
     cv::Mat img = _img.getMat();
     CALL_HAL(fast_dense, hal_FAST, img, keypoints, threshold, nonmax_suppression, type);
